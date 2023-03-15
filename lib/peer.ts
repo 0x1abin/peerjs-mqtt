@@ -2,6 +2,7 @@ import { EventEmitter } from "eventemitter3";
 import { util } from "./util";
 import logger, { LogLevel } from "./logger";
 import { Socket } from "./socket";
+import { MQTTSignaling } from "./mqttsignaling";
 import { MediaConnection } from "./mediaconnection";
 import { DataConnection } from "./dataconnection";
 import {
@@ -67,6 +68,7 @@ export class Peer extends EventEmitter<PeerEvents> {
 	private readonly _options: PeerOptions;
 	private readonly _api: API;
 	private readonly _socket: Socket;
+	private readonly _mqtt: MQTTSignaling;
 
 	private _id: string | null = null;
 	private _lastServerId: string | null = null;
@@ -97,6 +99,10 @@ export class Peer extends EventEmitter<PeerEvents> {
 
 	get socket() {
 		return this._socket;
+	}
+
+	get mqtt() {
+		return this._mqtt;
 	}
 
 	/**
@@ -160,7 +166,8 @@ export class Peer extends EventEmitter<PeerEvents> {
 
 		// Configurize options
 		options = {
-			debug: 0, // 1: Errors, 2: Warnings, 3: All logs
+			debug: 3, // 1: Errors, 2: Warnings, 3: All logs
+			secure: true,
 			host: util.CLOUD_HOST,
 			port: util.CLOUD_PORT,
 			path: "/",
@@ -205,6 +212,7 @@ export class Peer extends EventEmitter<PeerEvents> {
 
 		this._api = new API(options);
 		this._socket = this._createServerConnection();
+		this._mqtt = this._createMQTTConnection();
 
 		// Sanity checks
 		// Ensure WebRTC supported
@@ -273,10 +281,51 @@ export class Peer extends EventEmitter<PeerEvents> {
 		return socket;
 	}
 
+	private _createMQTTConnection(): MQTTSignaling {
+		const socket = new MQTTSignaling(
+			this._options.secure,
+			this._options.host!,
+			this._options.port!,
+			this._options.path!,
+			this._options.pingInterval,
+		);
+
+		socket.on(SocketEventType.Message, (data: ServerMessage) => {
+			this._handleMessage(data);
+		});
+
+		socket.on(SocketEventType.Error, (error: string) => {
+			this._abort(PeerErrorType.SocketError, error);
+		});
+
+		socket.on(SocketEventType.Disconnected, () => {
+			if (this.disconnected) {
+				return;
+			}
+
+			this.emitError(PeerErrorType.Network, "Lost connection to server.");
+			this.disconnect();
+		});
+
+		socket.on(SocketEventType.Close, () => {
+			if (this.disconnected) {
+				return;
+			}
+
+			this._abort(
+				PeerErrorType.SocketClosed,
+				"Underlying socket is already closed.",
+			);
+		});
+
+		return socket;
+	};
+
 	/** Initialize a connection with the server. */
 	private _initialize(id: string): void {
 		this._id = id;
 		this.socket.start(id, this._options.token!);
+		this.mqtt.start(id, this._options.token!);
 	}
 
 	/** Handles messages from the server. */
