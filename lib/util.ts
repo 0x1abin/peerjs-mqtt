@@ -28,8 +28,8 @@ const DEFAULT_CONFIG = {
 class Util {
 	noop(): void {}
 
-	readonly CLOUD_HOST = "0.peerjs.com";
-	readonly CLOUD_PORT = 443;
+	readonly CLOUD_HOST = "broker-cn.emqx.io";
+	readonly CLOUD_PORT = 8084;
 
 	// Browsers that need chunking:
 	readonly chunkedBrowsers = { Chrome: 1, chrome: 1 };

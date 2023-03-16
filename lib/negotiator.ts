@@ -80,7 +80,7 @@ export class Negotiator<
 
 			logger.log(`Received ICE candidates for ${peerId}:`, evt.candidate);
 
-			provider.socket.send({
+			provider.mqtt.send({
 				type: ServerMessageType.Candidate,
 				payload: {
 					candidate: evt.candidate,
@@ -88,6 +88,7 @@ export class Negotiator<
 					connectionId: connectionId,
 				},
 				dst: peerId,
+				src: provider.id,
 			});
 		};
 
@@ -253,10 +254,11 @@ export class Negotiator<
 					};
 				}
 
-				provider.socket.send({
+				provider.mqtt.send({
 					type: ServerMessageType.Offer,
 					payload,
 					dst: this.connection.peer,
+					src: provider.id,
 				});
 			} catch (err) {
 				// TODO: investigate why _makeOffer is being called from the answer
@@ -299,7 +301,7 @@ export class Negotiator<
 					`for:${this.connection.peer}`,
 				);
 
-				provider.socket.send({
+				provider.mqtt.send({
 					type: ServerMessageType.Answer,
 					payload: {
 						sdp: answer,
@@ -308,6 +310,7 @@ export class Negotiator<
 						browser: util.browser,
 					},
 					dst: this.connection.peer,
+					src: provider.id,
 				});
 			} catch (err) {
 				provider.emitError(PeerErrorType.WebRTC, err);

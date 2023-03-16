@@ -1,7 +1,7 @@
 import { EventEmitter } from "eventemitter3";
 import { util } from "./util";
 import logger, { LogLevel } from "./logger";
-import { Socket } from "./socket";
+import { v4 as uuidv4 } from 'uuid';
 import { MQTTSignaling } from "./mqttsignaling";
 import { MediaConnection } from "./mediaconnection";
 import { DataConnection } from "./dataconnection";
@@ -12,7 +12,6 @@ import {
 	ServerMessageType,
 } from "./enums";
 import { ServerMessage } from "./servermessage";
-import { API } from "./api";
 import type {
 	PeerConnectOption,
 	PeerJSOption,
@@ -66,8 +65,7 @@ export class Peer extends EventEmitter<PeerEvents> {
 	private static readonly DEFAULT_KEY = "peerjs";
 
 	private readonly _options: PeerOptions;
-	private readonly _api: API;
-	private readonly _socket: Socket;
+	// private readonly _api: API;
 	private readonly _mqtt: MQTTSignaling;
 
 	private _id: string | null = null;
@@ -95,10 +93,6 @@ export class Peer extends EventEmitter<PeerEvents> {
 
 	get open() {
 		return this._open;
-	}
-
-	get socket() {
-		return this._socket;
 	}
 
 	get mqtt() {
@@ -164,6 +158,8 @@ export class Peer extends EventEmitter<PeerEvents> {
 			userId = id.toString();
 		}
 
+		logger.log("Constructing Peer with ID: " + userId);
+
 		// Configurize options
 		options = {
 			debug: 3, // 1: Errors, 2: Warnings, 3: All logs
@@ -189,9 +185,9 @@ export class Peer extends EventEmitter<PeerEvents> {
 			if (this._options.path[0] !== "/") {
 				this._options.path = "/" + this._options.path;
 			}
-			if (this._options.path[this._options.path.length - 1] !== "/") {
-				this._options.path += "/";
-			}
+			// if (this._options.path[this._options.path.length - 1] !== "/") {
+			// 	this._options.path += "/";
+			// }
 		}
 
 		// Set whether we use SSL to same as current host
@@ -210,9 +206,10 @@ export class Peer extends EventEmitter<PeerEvents> {
 
 		logger.logLevel = this._options.debug || 0;
 
-		this._api = new API(options);
-		this._socket = this._createServerConnection();
+		// this._api = new API(options);
 		this._mqtt = this._createMQTTConnection();
+
+		// this.emit("open", this.id);
 
 		// Sanity checks
 		// Ensure WebRTC supported
@@ -233,52 +230,14 @@ export class Peer extends EventEmitter<PeerEvents> {
 		if (userId) {
 			this._initialize(userId);
 		} else {
-			this._api
-				.retrieveId()
-				.then((id) => this._initialize(id))
-				.catch((error) => this._abort(PeerErrorType.ServerError, error));
+			const genuuid = uuidv4();
+			logger.log("generated uuid: " + genuuid);
+			this._initialize(genuuid);
+			// this._api
+			// 	.retrieveId()
+			// 	.then((id) => this._initialize(id))
+			// 	.catch((error) => this._abort(PeerErrorType.ServerError, error));
 		}
-	}
-
-	private _createServerConnection(): Socket {
-		const socket = new Socket(
-			this._options.secure,
-			this._options.host!,
-			this._options.port!,
-			this._options.path!,
-			this._options.key!,
-			this._options.pingInterval,
-		);
-
-		socket.on(SocketEventType.Message, (data: ServerMessage) => {
-			this._handleMessage(data);
-		});
-
-		socket.on(SocketEventType.Error, (error: string) => {
-			this._abort(PeerErrorType.SocketError, error);
-		});
-
-		socket.on(SocketEventType.Disconnected, () => {
-			if (this.disconnected) {
-				return;
-			}
-
-			this.emitError(PeerErrorType.Network, "Lost connection to server.");
-			this.disconnect();
-		});
-
-		socket.on(SocketEventType.Close, () => {
-			if (this.disconnected) {
-				return;
-			}
-
-			this._abort(
-				PeerErrorType.SocketClosed,
-				"Underlying socket is already closed.",
-			);
-		});
-
-		return socket;
 	}
 
 	private _createMQTTConnection(): MQTTSignaling {
@@ -324,8 +283,7 @@ export class Peer extends EventEmitter<PeerEvents> {
 	/** Initialize a connection with the server. */
 	private _initialize(id: string): void {
 		this._id = id;
-		this.socket.start(id, this._options.token!);
-		this.mqtt.start(id, this._options.token!);
+		this._mqtt.start(id, this._options.token!);
 	}
 
 	/** Handles messages from the server. */
@@ -639,7 +597,7 @@ export class Peer extends EventEmitter<PeerEvents> {
 			this._connections.delete(peerId);
 		}
 
-		this.socket.removeAllListeners();
+		this.mqtt.removeAllListeners();
 	}
 
 	/** Closes all connections to this peer. */
@@ -671,7 +629,7 @@ export class Peer extends EventEmitter<PeerEvents> {
 		this._disconnected = true;
 		this._open = false;
 
-		this.socket.close();
+		this.mqtt.close();
 
 		this._lastServerId = currentId;
 		this._id = null;
@@ -703,16 +661,16 @@ export class Peer extends EventEmitter<PeerEvents> {
 		}
 	}
 
-	/**
-	 * Get a list of available peer IDs. If you're running your own server, you'll
-	 * want to set allow_discovery: true in the PeerServer options. If you're using
-	 * the cloud server, email team@peerjs.com to get the functionality enabled for
-	 * your key.
-	 */
-	listAllPeers(cb = (_: any[]) => {}): void {
-		this._api
-			.listAllPeers()
-			.then((peers) => cb(peers))
-			.catch((error) => this._abort(PeerErrorType.ServerError, error));
-	}
+	// /**
+	//  * Get a list of available peer IDs. If you're running your own server, you'll
+	//  * want to set allow_discovery: true in the PeerServer options. If you're using
+	//  * the cloud server, email team@peerjs.com to get the functionality enabled for
+	//  * your key.
+	//  */
+	// listAllPeers(cb = (_: any[]) => {}): void {
+	// 	this._api
+	// 		.listAllPeers()
+	// 		.then((peers) => cb(peers))
+	// 		.catch((error) => this._abort(PeerErrorType.ServerError, error));
+	// }
 }

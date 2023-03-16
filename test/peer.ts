@@ -53,7 +53,7 @@ describe("Peer", function () {
 		});
 
 		it("Peer#1 should has id #1", function (done) {
-			const peer1 = new Peer("1", { port: 8080, host: "localhost" });
+			const peer1 = new Peer("1", { debug: 3, port: 8084, host: "broker-cn.emqx.io", path: "/mqtt", secure: true });
 			expect(peer1.open).to.be.false;
 
 			const mediaOptions = {
