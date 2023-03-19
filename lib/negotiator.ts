@@ -52,6 +52,18 @@ export class Negotiator<
 		}
 	}
 
+	replaceStream(stream: MediaStream) {
+		const peerConnection = this.connection.peerConnection;
+		if (!peerConnection) {
+			logger.warn(
+				"Attempted to replace Stream on non-existent PeerConnection",
+			);
+			return;
+		}
+		peerConnection.getSenders().find(sender => sender.track.kind === 'video').replaceTrack(stream.getVideoTracks()[0]);
+    	peerConnection.getSenders().find(sender => sender.track.kind === 'audio').replaceTrack(stream.getAudioTracks()[0]);
+	}
+
 	/** Start a PC. */
 	private _startPeerConnection(): RTCPeerConnection {
 		logger.log("Creating RTCPeerConnection.");

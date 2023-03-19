@@ -13,6 +13,7 @@ import { connect, MqttClient } from "mqtt";  // import connect from mqtt
 export class MQTTSignaling extends EventEmitter {
 	private _disconnected: boolean = true;
 	private _id?: string;
+	private _key?: string;
 	private _mqtt?: MqttClient;
 	// private pingInterval?: any;
 	private _localtopic?: string;
@@ -42,13 +43,10 @@ export class MQTTSignaling extends EventEmitter {
 		return this._mqtt;
 	}
 
-	start(id: string, token: string): void {
+	start(id: string): void {
 		this._id = id;
-		this._localtopic = "webrtc/signaling/" + id;
-		logger.log("start localtopic:", this.localtopic);
-
-		const wsUrl = `${this._baseUrl}&id=${id}&token=${token}`;
-		logger.log("wsUrl:", wsUrl);
+		this._localtopic = id.substring(0, 23);
+		this._key = id.substring(24);
 		logger.log("MQTT baseURL:", this._baseUrl);
 
 		if (!!this._mqtt || !this._disconnected) {
@@ -120,12 +118,8 @@ export class MQTTSignaling extends EventEmitter {
 		logger.log("send data:", data);
 		// If we didn't get an ID yet, we can't yet send anything so we should queue
 		// up these messages.
-		if (!this._id) {
+		if (!this._id || this._disconnected) {
 			this._messagesQueue.push(data);
-			return;
-		}
-
-		if (this._disconnected) {
 			return;
 		}
 
@@ -146,7 +140,7 @@ export class MQTTSignaling extends EventEmitter {
 
 		const message = JSON.stringify(data);
 
-		this._mqtt.publish("webrtc/signaling/" + data.dst, message);
+		this._mqtt.publish(data.dst, message);
 	}
 
 	close(): void {
