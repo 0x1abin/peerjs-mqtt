@@ -174,7 +174,7 @@ export class MQTTSignaling extends EventEmitter {
 
 		const message = JSON.stringify(data);
         // this._encryptMessage
-		this._mqtt.publish(data.dst, message);
+		this._mqtt.publish(data.dst.slice(0, 20), message);
 	}
 
 	close(): void {

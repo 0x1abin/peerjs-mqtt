@@ -1,6 +1,6 @@
 {
 	"name": "peerjs-mqtt",
-	"version": "1.4.8-rc.1",
+	"version": "1.4.8-rc.3",
 	"keywords": [
 		"peerjs",
 		"webrtc",
@@ -190,9 +190,9 @@
 	"dependencies": {
 		"@swc/helpers": "^0.4.0",
 		"eventemitter3": "^4.0.7",
-		"mqtt": "^4.3.7",
 		"peerjs-js-binarypack": "^2.0.0-rc.1",
 		"uuid": "^9.0.0",
+		"mqtt": "^4.3.7",
 		"webrtc-adapter": "^8.0.0"
 	}
 }
