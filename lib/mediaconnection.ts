@@ -137,6 +137,16 @@ export class MediaConnection extends BaseConnection<MediaConnectionEvents> {
 		this._open = true;
 	}
 
+	replaceStream(stream: MediaStream): void {
+		if (!this._negotiator) {
+			logger.warn(
+				"Replacing Stream not supported for this browser yet. You need to pass a new stream to the PeerConnection when calling answer.",
+			);
+			return;
+		}
+		this._negotiator.replaceStream(stream);
+	}
+
 	/**
 	 * Exposed functionality for users.
 	 */
