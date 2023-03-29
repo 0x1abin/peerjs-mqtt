@@ -28,7 +28,7 @@ const DEFAULT_CONFIG = {
 class Util {
 	noop(): void {}
 
-	readonly CLOUD_HOST = "broker-cn.emqx.io";
+	readonly CLOUD_HOST = "broker.emqx.io";
 	readonly CLOUD_PORT = 8084;
 
 	// Browsers that need chunking:
