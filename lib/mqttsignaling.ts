@@ -1,7 +1,9 @@
 import { EventEmitter } from "eventemitter3";
 import logger from "./logger";
 import { SocketEventType, ServerMessageType } from "./enums";
-import { connect, MqttClient } from "mqtt";  // import connect from mqtt
+// import { connect, MqttClient } from "mqtt";  // import connect from mqtt
+import { connect, MqttClient } from "mqtt/dist/mqtt.min";  // import connect from mqtt
+// import * as mqtt from 'mqtt/dist/mqtt.min'
 // import { crypto } from "crypto-js";
 // const mqtt = require('mqtt');
 
