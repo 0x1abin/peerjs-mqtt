@@ -1,9 +1,8 @@
 import { EventEmitter } from "eventemitter3";
 import logger from "./logger";
 import { SocketEventType, ServerMessageType } from "./enums";
-// import { version } from "../package.json";
-
 import { connect, MqttClient } from "mqtt";  // import connect from mqtt
+// import { crypto } from "crypto-js";
 // const mqtt = require('mqtt');
 
 /**
@@ -13,7 +12,7 @@ import { connect, MqttClient } from "mqtt";  // import connect from mqtt
 export class MQTTSignaling extends EventEmitter {
 	private _disconnected: boolean = true;
 	private _id?: string;
-	private _key?: string;
+	// private _key?: CryptoKey;
 	private _mqtt?: MqttClient;
 	// private pingInterval?: any;
 	private _localtopic?: string;
@@ -44,62 +43,66 @@ export class MQTTSignaling extends EventEmitter {
 	}
 
 	start(id: string): void {
-		this._id = id;
-		this._localtopic = id.substring(0, 23);
-		this._key = id.substring(24);
-		logger.log("MQTT baseURL:", this._baseUrl);
-
-		if (!!this._mqtt || !this._disconnected) {
-			return;
+        if (!!this._mqtt || !this._disconnected) {
+            return;
 		}
 
-		const options = {
-			keepalive: this.pingInterval,
-			clientId: "peermq-" + this._id,
-			protocolId: 'MQTT',
-			protocolVersion: 4,
-			clean: true,
-			connectTimeout: 4000,
-			reconnectPeriod: 1000,
-		};
-		const mqtt = connect(this._baseUrl, options);
-		this._mqtt = mqtt;
-	
-		mqtt.on('connect', () => {
-			logger.log("mqtt connected");
-			mqtt.subscribe(this.localtopic, (err: any) => {
-				logger.log("subscribe localtopic:", this.localtopic);
-				if (!err) {
-					this._disconnected = false;
-					this.emit(SocketEventType.Message, { type: ServerMessageType.Open });
-				}
-			});
-			this._sendQueuedMessages();
-		});
-		
-		mqtt.on('message', (topic, message) => {
-			// message is Buffer
-			logger.log("topic:", topic.toString(), "message:", message.toString());
-			if (topic == this.localtopic) {
-				this.emit(SocketEventType.Message, JSON.parse(message.toString()));
-			} else {
-				logger.log("Invalid server message", message);
-				return;
-			}
-		});
+        // 63dfef03-9bfe-420d-941d-066619d76db1
+		this._id = id;
+		this._localtopic = id.slice(0, 20);
+		// this._importSecretKey(new TextEncoder().encode(id.slice(20))).then((key) => {
 
-		mqtt.on('disconnect', () => {
-			if (this._disconnected) {
-				return;
-			}
+            // this._key = key;
+            logger.log("MQTT baseURL:", this._baseUrl);
+            const options = {
+                keepalive: this.pingInterval,
+                clientId: "peermq-" + this._id,
+                protocolId: 'MQTT',
+                protocolVersion: 4,
+                clean: true,
+                connectTimeout: 4000,
+                reconnectPeriod: 1000,
+            };
+            const mqtt = connect(this._baseUrl, options);
+            this._mqtt = mqtt;
+        
+            mqtt.on('connect', () => {
+                logger.log("mqtt connected");
+                mqtt.subscribe(this.localtopic, (err: any) => {
+                    logger.log("subscribe localtopic:", this.localtopic);
+                    if (!err) {
+                        this._disconnected = false;
+                        this.emit(SocketEventType.Message, { type: ServerMessageType.Open });
+                    }
+                });
+                this._sendQueuedMessages();
+            });
+            
+            mqtt.on('message', (topic, message) => {
+                // message is Buffer
+                logger.log("topic:", topic.toString(), "message:", message.toString());
+                if (topic == this.localtopic) {
+                    // const plaintext = this._decryptMessage(this._key, message);
+                    this.emit(SocketEventType.Message, JSON.parse(message.toString()));
+                } else {
+                    logger.log("Invalid server message", message);
+                    return;
+                }
+            });
 
-			logger.log("MQTT disconnected.");
+            mqtt.on('disconnect', () => {
+                if (this._disconnected) {
+                    return;
+                }
 
-			this._cleanup();
-			this._disconnected = true;
+                logger.log("MQTT disconnected.");
 
-			this.emit(SocketEventType.Disconnected);
-		});
+                this._cleanup();
+                this._disconnected = true;
+
+                this.emit(SocketEventType.Disconnected);
+            });
+        // });
 	}
 
 	/** Send queued messages. */
@@ -112,6 +115,37 @@ export class MQTTSignaling extends EventEmitter {
 			this.send(message);
 		}
 	}
+
+    // private _importSecretKey(rawKey: Uint8Array) {
+    //     return window.crypto.subtle.importKey("raw", rawKey, "AES-GCM", true, [
+    //       "encrypt",
+    //       "decrypt",
+    //     ]);
+    //   }
+
+	// private _encryptMessage(iv, key, data) {
+	// 	// The iv must never be reused with a given key.
+	// 	// const iv = window.crypto.getRandomValues(new Uint8Array(12));
+	// 	return window.crypto.subtle.encrypt(
+	// 		{ name: "AES-GCM", iv: iv },
+	// 		key,
+	// 		data
+	// 	);
+	// }
+
+    // private _decryptMessage(key, data): string {
+    //     if (data.length < 12) {
+    //         throw new Error("Invalid data");
+    //     }
+    //     const iv = data.slice(0, 12);
+    //     const ciphertext = data.slice(12);
+    //     const plaintext = window.crypto.subtle.decrypt(
+    //         { name: "AES-GCM", iv: iv },
+    //         key,
+    //         ciphertext
+    //     );
+    //     return plaintext.toString();
+    // }
 
 	/** Exposed send for DC & Peer. */
 	send(data: any): void {
@@ -139,7 +173,7 @@ export class MQTTSignaling extends EventEmitter {
 		}
 
 		const message = JSON.stringify(data);
-
+        // this._encryptMessage
 		this._mqtt.publish(data.dst, message);
 	}
 

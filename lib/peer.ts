@@ -57,6 +57,11 @@ type PeerEvents = {
 	 * Errors on the peer are almost always fatal and will destroy the peer.
 	 */
 	error: (error: Error) => void;
+
+	/**
+	 * MQTT push  message
+	 */
+	push: (message: any) => void;
 };
 /**
  * A peer who can initiate connections with other peers.
@@ -206,10 +211,7 @@ export class Peer extends EventEmitter<PeerEvents> {
 
 		logger.logLevel = this._options.debug || 0;
 
-		// this._api = new API(options);
 		this._mqtt = this._createMQTTConnection();
-
-		// this.emit("open", this.id);
 
 		// Sanity checks
 		// Ensure WebRTC supported
@@ -230,13 +232,7 @@ export class Peer extends EventEmitter<PeerEvents> {
 		if (userId) {
 			this._initialize(userId);
 		} else {
-			const genuuid = uuidv4();
-			logger.log("generated uuid: " + genuuid);
-			this._initialize(genuuid);
-			// this._api
-			// 	.retrieveId()
-			// 	.then((id) => this._initialize(id))
-			// 	.catch((error) => this._abort(PeerErrorType.ServerError, error));
+			this._initialize(uuidv4());
 		}
 	}
 
@@ -283,7 +279,7 @@ export class Peer extends EventEmitter<PeerEvents> {
 	/** Initialize a connection with the server. */
 	private _initialize(id: string): void {
 		this._id = id;
-		this._mqtt.start(id, this._options.token!);
+		this._mqtt.start(id);
 	}
 
 	/** Handles messages from the server. */
@@ -293,6 +289,9 @@ export class Peer extends EventEmitter<PeerEvents> {
 		const peerId = message.src;
 
 		switch (type) {
+			case ServerMessageType.Push:
+				this.emit("push", payload);
+				break;
 			case ServerMessageType.Open: // The connection to the server is open.
 				this._lastServerId = this.id;
 				this._open = true;
@@ -492,6 +491,10 @@ export class Peer extends EventEmitter<PeerEvents> {
 			this._connections.set(peerId, []);
 		}
 		this._connections.get(peerId).push(connection);
+	}
+
+	push(id: string, data: any): void {
+		this._mqtt.send({type: 'PUSH', payload: data, dst: id });
 	}
 
 	//TODO should be private

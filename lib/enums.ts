@@ -42,4 +42,5 @@ export enum ServerMessageType {
 	InvalidKey = "INVALID-KEY", // The given API key cannot be found.
 	Leave = "LEAVE", // Another peer has closed its connection to this peer.
 	Expire = "EXPIRE", // The offer sent to a peer has expired without response.
+	Push = "PUSH", // MQTT message to peer.
 }
