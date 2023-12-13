@@ -84,6 +84,7 @@ export class Negotiator<
 					connectionId: connectionId,
 				},
 				dst: peerId,
+				src: provider.id,
 			});
 		};
 
@@ -241,6 +242,7 @@ export class Negotiator<
 					type: ServerMessageType.Offer,
 					payload,
 					dst: this.connection.peer,
+					src: provider.id,
 				});
 			} catch (err) {
 				// TODO: investigate why _makeOffer is being called from the answer
@@ -291,6 +293,7 @@ export class Negotiator<
 						connectionId: this.connection.connectionId,
 					},
 					dst: this.connection.peer,
+					src: provider.id,
 				});
 			} catch (err) {
 				provider.emitError(PeerErrorType.WebRTC, err);

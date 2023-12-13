@@ -1,20 +1,21 @@
 {
-	"name": "peerjs",
-	"version": "1.5.2",
+	"name": "peerjs-mqtt",
+	"version": "1.5.2-rc.2",
 	"keywords": [
 		"peerjs",
 		"webrtc",
 		"p2p",
-		"rtc"
+		"rtc",
+		"mqtt"
 	],
-	"description": "PeerJS client",
+	"description": "PeerJS MQTT signaling client",
 	"homepage": "https://peerjs.com",
 	"bugs": {
-		"url": "https://github.com/peers/peerjs/issues"
+		"url": "https://github.com/0x1abin/peerjs-mqtt/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/peers/peerjs"
+		"url": "https://github.com/0x1abin/peerjs-mqtt"
 	},
 	"license": "MIT",
 	"contributors": [
@@ -218,7 +219,9 @@
 		"@msgpack/msgpack": "^2.8.0",
 		"cbor-x": "1.5.4",
 		"eventemitter3": "^4.0.7",
+		"mqtt": "^4.3.7",
 		"peerjs-js-binarypack": "^2.1.0",
+		"uuid": "^9.0.1",
 		"webrtc-adapter": "^8.0.0"
 	},
 	"alias": {

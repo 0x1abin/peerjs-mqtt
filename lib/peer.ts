@@ -1,6 +1,7 @@
 import { util } from "./util";
 import logger, { LogLevel } from "./logger";
 import { Socket } from "./socket";
+import { OverMQTT } from "./overMQTT";
 import { MediaConnection } from "./mediaconnection";
 import type { DataConnection } from "./dataconnection/DataConnection";
 import {
@@ -10,7 +11,7 @@ import {
 	SocketEventType,
 } from "./enums";
 import type { ServerMessage } from "./servermessage";
-import { API } from "./api";
+import { v4 as uuidv4 } from "uuid";
 import type {
 	CallOption,
 	PeerConnectOption,
@@ -65,6 +66,7 @@ class PeerOptions implements PeerJSOption {
 	referrerPolicy?: ReferrerPolicy;
 	logFunction?: (logLevel: LogLevel, ...rest: any[]) => void;
 	serializers?: SerializerMapping;
+	overMQTT?: boolean;
 }
 
 export { type PeerOptions };
@@ -122,8 +124,8 @@ export class Peer extends EventEmitterWithError<PeerErrorType, PeerEvents> {
 		default: BinaryPack,
 	};
 	private readonly _options: PeerOptions;
-	private readonly _api: API;
-	private readonly _socket: Socket;
+	// private readonly _api: API;
+	private readonly _socket: Socket | OverMQTT;
 
 	private _id: string | null = null;
 	private _lastServerId: string | null = null;
@@ -233,6 +235,7 @@ export class Peer extends EventEmitterWithError<PeerErrorType, PeerEvents> {
 			config: util.defaultConfig,
 			referrerPolicy: "strict-origin-when-cross-origin",
 			serializers: {},
+			overMQTT: false,
 			...options,
 		};
 		this._options = options;
@@ -269,8 +272,11 @@ export class Peer extends EventEmitterWithError<PeerErrorType, PeerEvents> {
 
 		logger.logLevel = this._options.debug || 0;
 
-		this._api = new API(options);
-		this._socket = this._createServerConnection();
+		if (this._options.overMQTT) {
+			this._socket = this._createMQTTConnection();
+		} else {
+			this._socket = this._createServerConnection();
+		}
 
 		// Sanity checks
 		// Ensure WebRTC supported
@@ -291,10 +297,7 @@ export class Peer extends EventEmitterWithError<PeerErrorType, PeerEvents> {
 		if (userId) {
 			this._initialize(userId);
 		} else {
-			this._api
-				.retrieveId()
-				.then((id) => this._initialize(id))
-				.catch((error) => this._abort(PeerErrorType.ServerError, error));
+			this._initialize(uuidv4());
 		}
 	}
 
@@ -305,6 +308,46 @@ export class Peer extends EventEmitterWithError<PeerErrorType, PeerEvents> {
 			this._options.port!,
 			this._options.path!,
 			this._options.key!,
+			this._options.pingInterval,
+		);
+
+		socket.on(SocketEventType.Message, (data: ServerMessage) => {
+			this._handleMessage(data);
+		});
+
+		socket.on(SocketEventType.Error, (error: string) => {
+			this._abort(PeerErrorType.SocketError, error);
+		});
+
+		socket.on(SocketEventType.Disconnected, () => {
+			if (this.disconnected) {
+				return;
+			}
+
+			this.emitError(PeerErrorType.Network, "Lost connection to server.");
+			this.disconnect();
+		});
+
+		socket.on(SocketEventType.Close, () => {
+			if (this.disconnected) {
+				return;
+			}
+
+			this._abort(
+				PeerErrorType.SocketClosed,
+				"Underlying socket is already closed.",
+			);
+		});
+
+		return socket;
+	}
+
+	private _createMQTTConnection(): OverMQTT {
+		const socket = new OverMQTT(
+			this._options.secure,
+			this._options.host!,
+			this._options.port!,
+			this._options.path!,
 			this._options.pingInterval,
 		);
 
@@ -727,18 +770,5 @@ export class Peer extends EventEmitterWithError<PeerErrorType, PeerEvents> {
 				`Peer ${this.id} cannot reconnect because it is not disconnected from the server!`,
 			);
 		}
-	}
-
-	/**
-	 * Get a list of available peer IDs. If you're running your own server, you'll
-	 * want to set allow_discovery: true in the PeerServer options. If you're using
-	 * the cloud server, email team@peerjs.com to get the functionality enabled for
-	 * your key.
-	 */
-	listAllPeers(cb = (_: any[]) => {}): void {
-		this._api
-			.listAllPeers()
-			.then((peers) => cb(peers))
-			.catch((error) => this._abort(PeerErrorType.ServerError, error));
 	}
 }
