@@ -50,13 +50,13 @@ export class OverMQTT extends EventEmitter {
 			protocolId: 'MQTT',
 			protocolVersion: 4,
 			clean: true,
-			connectTimeout: 4000,
-			reconnectPeriod: 1000,
+			connectTimeout: 1000 * 10,
+			reconnectPeriod: 1000 * 30,
 		};
 		this._mqtt = connect(this._baseUrl, options);
 	
 		this._mqtt.on('connect', () => {
-			logger.log("mqtt connected");
+			logger.log("MQTT on connected");
 			this._disconnected = false;
 			this._mqtt.subscribe(this._id, (err: any) => {
 				logger.log("subscribe localtopic:", this._id);
@@ -70,9 +70,8 @@ export class OverMQTT extends EventEmitter {
 		
 		this._mqtt.on('message', (topic, message) => {
 			// message is Buffer
-			logger.log("topic:", topic.toString(), "message:", message.toString());
+			// logger.log("mqtt Recv topic:", topic, "message:", message.toString());
 			if (topic == this._id) {
-				// const plaintext = this._decryptMessage(this._key, message);
 				this.emit(SocketEventType.Message, JSON.parse(message.toString()));
 			} else {
 				logger.log("Invalid server message", message);
@@ -81,17 +80,33 @@ export class OverMQTT extends EventEmitter {
 		});
 
 		this._mqtt.on('disconnect', () => {
-			if (this._disconnected) {
-				return;
-			}
-
-			logger.log("MQTT disconnected.");
-
-			this._cleanup();
+			logger.log("MQTT on disconnected.");
+			// this._cleanup();
 			this._isSubscribed = false;
 			this._disconnected = true;
-
 			this.emit(SocketEventType.Disconnected);
+		});
+
+		this._mqtt.on('close', () => {
+			logger.log("MQTT on closed.");
+			this.emit(SocketEventType.Close );
+		});
+
+		this._mqtt.on('error', (err: any) => {
+			logger.log("MQTT on error:", err);
+			this.emit(SocketEventType.Error, err);
+		});
+
+		this._mqtt.on('reconnect', () => {
+			logger.log("MQTT on reconnecting...");
+		});
+
+		this._mqtt.on('offline', () => {
+			logger.log("MQTT on offline.");
+		});
+
+		this._mqtt.on('end', () => {
+			logger.log("MQTT on end.");
 		});
 	}
 
@@ -108,31 +123,30 @@ export class OverMQTT extends EventEmitter {
 	}
 
 	send(data: any): void {
-		logger.log("send data:", data);
 		// If we didn't get an ID yet, we can't yet send anything so we should queue
 		// up these messages.
 		if (!this._id || this._disconnected) {
 			this._messagesQueue.push(data);
 			return;
 		}
-
+		
 		if (!data.type) {
 			this.emit(SocketEventType.Error, " send Invalid message");
 			return;
 		}
-
+		
 		if (!data.dst) {
 			logger.error("No dst");
 			this.emit(SocketEventType.Error, "Not dst");
 			return;
 		}
-
+		
 		if (!this._isSubscribed) {
 			return;
 		}
-
+		
 		const message = JSON.stringify(data);
-        // this._encryptMessage
+		// logger.log("mqtt publish data:", message);
 		this._mqtt.publish(data.dst, message);
 	}
 
