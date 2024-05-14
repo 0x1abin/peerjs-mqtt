@@ -1,6 +1,6 @@
 {
 	"name": "peerjs-mqtt",
-	"version": "1.5.3-rc.0",
+	"version": "1.5.3-rc.3",
 	"keywords": [
 		"peerjs",
 		"webrtc",
@@ -219,7 +219,7 @@
 		"@msgpack/msgpack": "^2.8.0",
 		"cbor-x": "1.5.4",
 		"eventemitter3": "^4.0.7",
-		"mqtt": "^4.3.7",
+		"mqtt": "^5.6.0",
 		"peerjs-js-binarypack": "^2.1.0",
 		"uuid": "^9.0.1",
 		"webrtc-adapter": "^8.0.0"

@@ -22,6 +22,7 @@ import { Raw } from "./dataconnection/BufferedConnection/Raw";
 import { Json } from "./dataconnection/BufferedConnection/Json";
 
 import { EventEmitterWithError, PeerError } from "./peerError";
+import type { MqttClient } from "mqtt";
 
 class PeerOptions implements PeerJSOption {
 	/**
@@ -769,6 +770,14 @@ export class Peer extends EventEmitterWithError<PeerErrorType, PeerEvents> {
 			throw new Error(
 				`Peer ${this.id} cannot reconnect because it is not disconnected from the server!`,
 			);
+		}
+	}
+
+	mqttc(): MqttClient {
+		if (this._socket instanceof OverMQTT) {
+			return this._socket.mqttc();
+		} else {
+			throw new Error("Peer is not using MQTT");
 		}
 	}
 }

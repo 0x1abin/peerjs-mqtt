@@ -2,7 +2,9 @@ import { EventEmitter } from "eventemitter3";
 import logger from "./logger";
 import { ServerMessageType, SocketEventType } from "./enums";
 import { version } from "../package.json";
-import { connect, MqttClient } from "mqtt/dist/mqtt.min";
+import mqtt from "mqtt";
+import type { MqttClient, IClientOptions } from "mqtt";
+
 
 /**
  * An abstraction on top of WebSockets to provide fastest
@@ -44,7 +46,7 @@ export class OverMQTT extends EventEmitter {
 
 		logger.log("MQTT baseURL:", this._baseUrl);
 		logger.log("token:", token);
-		const options = {
+		const options: IClientOptions = {
 			keepalive: this.pingInterval,
 			clientId: "peer@mqtt-" + version + "-" + this._id.slice(0, 8),
 			protocolId: 'MQTT',
@@ -53,7 +55,7 @@ export class OverMQTT extends EventEmitter {
 			connectTimeout: 1000 * 10,
 			reconnectPeriod: 1000 * 30,
 		};
-		this._mqtt = connect(this._baseUrl, options);
+		this._mqtt = mqtt.connect(this._baseUrl, options);
 	
 		this._mqtt.on('connect', () => {
 			logger.log("MQTT on connected");
@@ -165,5 +167,9 @@ export class OverMQTT extends EventEmitter {
 			this._mqtt.end();
 			this._mqtt = undefined;
 		}
+	}
+
+	mqttc(): MqttClient | undefined {
+		return this._mqtt;
 	}
 }
