@@ -16,6 +16,7 @@ export class OverMQTT extends EventEmitter {
 	private _id?: string;
 	private _messagesQueue: Array<object> = [];
 	private _mqtt?: MqttClient;
+	private _mqttOptions?: IClientOptions;
 	private readonly _baseUrl: string;
 
 	constructor(
@@ -24,6 +25,7 @@ export class OverMQTT extends EventEmitter {
 		port: number,
 		path: string,
 		private readonly pingInterval: number = 60,
+		options?: IClientOptions,
 	) {
 		super();
 
@@ -32,6 +34,8 @@ export class OverMQTT extends EventEmitter {
 		this._baseUrl = wsProtocol + host + ":" + port + path;
 
 		this.pingInterval = pingInterval;
+
+		this._mqttOptions = options;
 	}
 
 	start(id: string, token: string): void {
@@ -45,7 +49,6 @@ export class OverMQTT extends EventEmitter {
 		this._isSubscribed = false;
 
 		logger.log("MQTT baseURL:", this._baseUrl);
-		logger.log("token:", token);
 		const options: IClientOptions = {
 			keepalive: this.pingInterval,
 			clientId: "peer@mqtt-" + version + "-" + this._id.slice(0, 8),
@@ -54,7 +57,9 @@ export class OverMQTT extends EventEmitter {
 			clean: true,
 			connectTimeout: 1000 * 10,
 			reconnectPeriod: 1000 * 30,
+			...this._mqttOptions,
 		};
+		logger.log("MQTT options:", options);
 		this._mqtt = mqtt.connect(this._baseUrl, options);
 	
 		this._mqtt.on('connect', () => {

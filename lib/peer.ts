@@ -22,7 +22,7 @@ import { Raw } from "./dataconnection/BufferedConnection/Raw";
 import { Json } from "./dataconnection/BufferedConnection/Json";
 
 import { EventEmitterWithError, PeerError } from "./peerError";
-import type { MqttClient } from "mqtt";
+import type { MqttClient, IClientOptions } from "mqtt";
 
 class PeerOptions implements PeerJSOption {
 	/**
@@ -68,6 +68,7 @@ class PeerOptions implements PeerJSOption {
 	logFunction?: (logLevel: LogLevel, ...rest: any[]) => void;
 	serializers?: SerializerMapping;
 	overMQTT?: boolean;
+	mqttOptions?: IClientOptions;
 }
 
 export { type PeerOptions };
@@ -350,6 +351,7 @@ export class Peer extends EventEmitterWithError<PeerErrorType, PeerEvents> {
 			this._options.port!,
 			this._options.path!,
 			this._options.pingInterval,
+			this._options.mqttOptions,
 		);
 
 		socket.on(SocketEventType.Message, (data: ServerMessage) => {
