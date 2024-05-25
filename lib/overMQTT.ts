@@ -45,6 +45,8 @@ export class OverMQTT extends EventEmitter {
 			return;
 		}
 
+		token = token || "";
+
 		this._disconnected = true;
 		this._isSubscribed = false;
 
